@@ -1,45 +1,49 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const productSchema = mongoose.Schema({
-    farmer: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Farmer', 
-        required: true
-    },
-    produceType: {
-        type: String,
-        required: true,
-    },
-    category: {
-        type: String,
-        required: true,
-    },
-    quantity: {
-        type: Number,
-        required: true,
-    },
-    location: {
-        type: String,
-        required: true,
-    },
-    bidPrice: {
-        type: Number,
-        required: true,
-    },
-    bidPeriod: {
-        type: Date,
-        required: true,
-    },
-    bidders: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User' 
-    }],
-    createdAt: {
-        type: Date,
-        default: Date.now
-    }
+const productSchema = new mongoose.Schema({
+  farmer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Farmer",
+    required: true,
+  },
+  category: {
+    type: String,
+    required: true,
+  },
+  location: {
+    type: String,
+    required: true,
+  },
+  produceName: {
+    type: String,
+    required: true,
+  },
+  quantity: {
+    type: Number,
+    required: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+  bulkPrice: {
+    type: Number,
+    required: false,
+  },
+  imagePath: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
-const Product = mongoose.model('Product', productSchema);
+const Product = mongoose.model("Product", productSchema);
 
 export default Product;
