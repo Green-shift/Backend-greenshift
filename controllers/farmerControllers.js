@@ -107,6 +107,103 @@ const postProduct = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Update a product
+// @route   PUT /api/farmers/products/:id
+// @access  Private (Farmer only)
+const updateProduct = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const {
+    produceName,
+    category,
+    quantity,
+    location,
+    price,
+    bulkPrice,
+    description,
+  } = req.body;
+
+  const farmer = await Farmer.findById(req.user._id);
+
+  if (!farmer) {
+    res.status(401);
+    throw new Error("Farmer not authorized");
+  }
+
+  // Find the product
+  const product = await Product.findById(id);
+
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  // Check if the current farmer owns the product
+  if (!product.farmer.equals(req.user._id)) {
+    res.status(403);
+    throw new Error("Not authorized to update this product");
+  }
+
+  // Update product details
+  product.produceName = produceName || product.produceName;
+  product.category = category || product.category;
+  product.quantity = quantity || product.quantity;
+  product.location = location || product.location;
+  product.price = price || product.price;
+  product.bulkPrice = bulkPrice || product.bulkPrice;
+  product.description = description || product.description;
+  product.imagePath = req.file
+    ? `/uploads/${req.file.filename}`
+    : product.imagePath;
+
+  const updatedProduct = await product.save();
+
+  res.status(200).json({
+    _id: updatedProduct._id,
+    produceName: updatedProduct.produceName,
+    category: updatedProduct.category,
+    quantity: updatedProduct.quantity,
+    location: updatedProduct.location,
+    price: updatedProduct.price,
+    bulkPrice: updatedProduct.bulkPrice,
+    description: updatedProduct.description,
+    imagePath: updatedProduct.imagePath,
+    farmer: updatedProduct.farmer,
+  });
+});
+
+// @desc    Delete a product
+// @route   DELETE /api/farmers/products/:id
+// @access  Private (Farmer only)
+const deleteProduct = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const farmer = await Farmer.findById(req.user._id);
+
+  if (!farmer) {
+    res.status(401);
+    throw new Error("Farmer not authorized");
+  }
+
+  // Find the product
+  const product = await Product.findById(id);
+
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  // Check if the current farmer owns the product
+  if (!product.farmer.equals(req.user._id)) {
+    res.status(403);
+    throw new Error("Not authorized to delete this product");
+  }
+
+  // Use deleteOne() to remove the product
+  await Product.deleteOne({ _id: id });
+
+  res.status(200).json({ message: "Product removed" });
+});
+
 // @desc    Get all products
 // @route   GET /api/products
 // @access  Public
@@ -146,4 +243,11 @@ const getFarmerProducts = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerFarmer, postProduct, getAllProducts, getFarmerProducts };
+export {
+  registerFarmer,
+  postProduct,
+  getAllProducts,
+  getFarmerProducts,
+  updateProduct,
+  deleteProduct,
+};

@@ -6,6 +6,8 @@ import {
   getFarmerProducts,
   postProduct,
   registerFarmer,
+  updateProduct,
+  deleteProduct,
 } from "../controllers/farmerControllers.js";
 import { farmerOnly, protect } from "../middleware/authMiddleware.js";
 
@@ -21,7 +23,11 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
+
+// Register a new farmer
 router.post("/", registerFarmer);
+
+// Post a new product
 router.post(
   "/products",
   protect,
@@ -29,7 +35,23 @@ router.post(
   upload.single("image"),
   postProduct
 );
-router.get("/products", protect, getAllProducts);
+
+// Get all products
+router.get("/products", getAllProducts);
+
+// Get products posted by a particular farmer
 router.get("/farmerProducts", protect, farmerOnly, getFarmerProducts);
+
+// Update a product
+router.put(
+  "/products/:id",
+  protect,
+  farmerOnly,
+  upload.single("image"),
+  updateProduct
+);
+
+// Delete a product
+router.delete("/products/:id", protect, farmerOnly, deleteProduct);
 
 export default router;
