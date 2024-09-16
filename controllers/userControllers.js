@@ -62,74 +62,94 @@ const authUserOrFarmer = asyncHandler(async (req, res) => {
     }
   }
 });
-
-//@desc    Register a new user or farmer
-//route    POST /api/users
-//@access  Public
+// @desc    Register a new user
+// @route   POST /api/users
+// @access  Public
 const registerUser = asyncHandler(async (req, res) => {
   const { firstName, lastName, email, phoneNumber, password, isFarmer } =
     req.body;
 
-  // Ensure either email or phone number is provided
+  // Validate input
   if (!email && !phoneNumber) {
     res.status(400);
     throw new Error("Please provide either an email or a phone number");
   }
 
-  // Validate phone number if provided
+  // Clean phone number
+  let cleanedPhoneNumber;
   if (phoneNumber) {
-    const cleanedPhoneNumber = phoneNumber.replace(/\D/g, ""); // Remove non-digit characters
+    cleanedPhoneNumber = phoneNumber.replace(/\D/g, "");
     if (cleanedPhoneNumber.length !== 11) {
       res.status(400);
       throw new Error("Phone number must be exactly 11 digits");
     }
   }
 
-  // Prepare query conditions
-  const queryConditions = [];
-  if (email) {
-    queryConditions.push({ email: email.toLowerCase().trim() });
-  }
-  if (phoneNumber) {
-    queryConditions.push({ phoneNumber: cleanedPhoneNumber });
-  }
-
-  // Check if user with provided email or phone number already exists
-  const userExists = await User.findOne({
-    $or: queryConditions,
-  });
-
-  if (userExists) {
+  // Clean and validate email
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const cleanedEmail =
+    email?.trim() === "" ? null : email?.toLowerCase().trim();
+  if (cleanedEmail && !emailRegex.test(cleanedEmail)) {
     res.status(400);
-    throw new Error("User already exists with this email or phone number");
+    throw new Error("Invalid email address");
   }
 
-  // Create new user
-  const user = await User.create({
-    firstName,
-    lastName,
-    email: email ? email.toLowerCase().trim() : undefined,
-    phoneNumber: phoneNumber ? cleanedPhoneNumber : undefined,
-    password,
-    isFarmer,
-  });
+  try {
+    // Check for existing user
+    const queryConditions = [];
+    if (cleanedEmail !== null && cleanedEmail !== "") {
+      queryConditions.push({ email: cleanedEmail });
+    }
+    if (cleanedPhoneNumber) {
+      queryConditions.push({ phoneNumber: cleanedPhoneNumber.toString() });
+    }
 
-  // Respond with user details
-  if (user) {
-    res.status(201).json({
-      _id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phoneNumber: user.phoneNumber,
-      email: user.email,
-      isFarmer: user.isFarmer,
-      token: generateToken(user._id),
+    const existingUser = await User.findOne({
+      $or: queryConditions,
     });
-  } else {
-    res.status(400);
-    throw new Error("Invalid user data");
+
+    if (existingUser) {
+      res.status(409).json({
+        message: "User already exists with this email or phone number",
+      });
+    } else {
+      // Create new user
+      const newUser = {
+        firstName,
+        lastName,
+        phoneNumber: cleanedPhoneNumber,
+        password,
+        isFarmer,
+      };
+      if (cleanedEmail !== null) {
+        newUser.email = cleanedEmail;
+      }
+
+      const user = await User.create(newUser);
+
+      // Respond with user details
+      if (user) {
+        res.status(201).json({
+          _id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: user.phoneNumber,
+          email: user.email,
+          isFarmer: user.isFarmer,
+          token: generateToken(user._id),
+        });
+      } else {
+        res.status(500).json({ message: "Failed to create user" });
+      }
+    }
+  } catch (error) {
+    console.error("Registration Error:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while registering user" });
   }
 });
+
 //@desc    Logout user
 //route    POST /api/users/logout
 //@access  Public
