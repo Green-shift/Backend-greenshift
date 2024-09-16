@@ -62,6 +62,7 @@ const authUserOrFarmer = asyncHandler(async (req, res) => {
     }
   }
 });
+
 //@desc    Register a new user or farmer
 //route    POST /api/users
 //@access  Public
@@ -75,9 +76,27 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error("Please provide either an email or a phone number");
   }
 
+  // Validate phone number if provided
+  if (phoneNumber) {
+    const cleanedPhoneNumber = phoneNumber.replace(/\D/g, ""); // Remove non-digit characters
+    if (cleanedPhoneNumber.length !== 11) {
+      res.status(400);
+      throw new Error("Phone number must be exactly 11 digits");
+    }
+  }
+
+  // Prepare query conditions
+  const queryConditions = [];
+  if (email) {
+    queryConditions.push({ email: email.toLowerCase().trim() });
+  }
+  if (phoneNumber) {
+    queryConditions.push({ phoneNumber: cleanedPhoneNumber });
+  }
+
   // Check if user with provided email or phone number already exists
   const userExists = await User.findOne({
-    $or: [{ email }, { phoneNumber }],
+    $or: queryConditions,
   });
 
   if (userExists) {
@@ -87,10 +106,10 @@ const registerUser = asyncHandler(async (req, res) => {
 
   // Create new user
   const user = await User.create({
-    email,
     firstName,
     lastName,
-    phoneNumber,
+    email: email ? email.toLowerCase().trim() : undefined,
+    phoneNumber: phoneNumber ? cleanedPhoneNumber : undefined,
     password,
     isFarmer,
   });
@@ -111,7 +130,6 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error("Invalid user data");
   }
 });
-
 //@desc    Logout user
 //route    POST /api/users/logout
 //@access  Public
