@@ -7,32 +7,48 @@ import Farmer from "../models/farmerModel.js";
 // @route   POST /api/auth
 // @access  Public
 const authUserOrFarmer = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { credential, password } = req.body;
 
-  // Check if the user exists in the User collection
-  let user = await User.findOne({ email });
+  // Check if credential and password are provided
+  if (!credential || !password) {
+    res.status(400);
+    throw new Error(
+      "Please provide both credential (email/phone) and password"
+    );
+  }
+
+  // Check if the credential is an email or phone number
+  const isEmail = credential.includes("@");
+
+  // Search by email if it's an email, otherwise search by phone number
+  const user = isEmail
+    ? await User.findOne({ email: credential })
+    : await User.findOne({ phoneNumber: credential });
 
   if (user && (await user.matchPassword(password))) {
-    // If user is found in User collection
+    // If user found and password matches
     const token = generateToken(user._id);
     res.status(200).json({
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      phoneNumber: user.phoneNumber,
       isFarmer: user.isFarmer,
       token,
     });
   } else {
-    // If not found in User collection, check the Farmer collection
-    const farmer = await Farmer.findOne({ email });
+    // Check in Farmer collection if not found in User collection
+    const farmer = isEmail
+      ? await Farmer.findOne({ email: credential })
+      : await Farmer.findOne({ phoneNumber: credential });
 
     if (farmer && (await farmer.matchPassword(password))) {
-      // If farmer is found in Farmer collection
       const token = generateToken(farmer._id);
       res.status(200).json({
         _id: farmer._id,
         email: farmer.email,
+        phoneNumber: farmer.phoneNumber,
         businessCategories: farmer.businessCategories,
         businessState: farmer.businessState,
         businessLocalGovernmentArea: farmer.businessLocalGovernmentArea,
@@ -41,13 +57,11 @@ const authUserOrFarmer = asyncHandler(async (req, res) => {
         token,
       });
     } else {
-      // If neither user nor farmer is found
       res.status(401);
-      throw new Error("Invalid email or password");
+      throw new Error("Invalid email/phone number or password");
     }
   }
 });
-
 //@desc    Register a new user or farmer
 //route    POST /api/users
 //@access  Public
