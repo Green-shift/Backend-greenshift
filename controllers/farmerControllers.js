@@ -9,6 +9,8 @@ const registerFarmer = asyncHandler(async (req, res) => {
   const {
     phoneNumber,
     email,
+    firstName,
+    lastName,
     businessCategories,
     businessState,
     businessLocalGovernmentArea,
@@ -17,40 +19,93 @@ const registerFarmer = asyncHandler(async (req, res) => {
     isFarmer,
   } = req.body;
 
-  // Checking if farmer exists
-  const farmerExists = await Farmer.findOne({ email });
-  if (farmerExists) {
+  // Validate input
+  if (!email && !phoneNumber) {
     res.status(400);
-    throw new Error("Farmer already exists");
+    throw new Error("Please provide either email or phone number");
   }
 
-  // Creating new farmer
-  const farmer = await Farmer.create({
-    phoneNumber,
-    email,
-    businessCategories,
-    businessState,
-    businessLocalGovernmentArea,
-    businessAddress,
-    password,
-    isFarmer,
-  });
+  // Clean phone number
+  let cleanedPhoneNumber;
+  if (phoneNumber) {
+    cleanedPhoneNumber = phoneNumber.replace(/\D/g, "");
+    if (cleanedPhoneNumber.length !== 11) {
+      res.status(400);
+      throw new Error("Phone number must be exactly 11 digits");
+    }
+  }
 
-  // If farmer creation is successful
-  if (farmer) {
-    res.status(201).json({
-      _id: farmer._id,
-      phoneNumber: farmer.phoneNumber,
-      email: farmer.email,
-      businessCategories: farmer.businessCategories,
-      businessState: farmer.businessState,
-      businessLocalGovernmentArea: farmer.businessLocalGovernmentArea,
-      businessAddress: farmer.businessAddress,
-      isFarmer: farmer.isFarmer,
-    });
-  } else {
+  // Clean and validate email
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const cleanedEmail =
+    email?.trim() === "" ? null : email?.toLowerCase().trim();
+  if (cleanedEmail && !emailRegex.test(cleanedEmail)) {
     res.status(400);
-    throw new Error("Invalid farmer data");
+    throw new Error("Invalid email address");
+  }
+
+  try {
+    // Check for existing farmer
+    const queryConditions = [];
+    if (cleanedEmail !== null && cleanedEmail !== "") {
+      queryConditions.push({ email: cleanedEmail });
+    }
+    if (cleanedPhoneNumber) {
+      queryConditions.push({ phoneNumber: cleanedPhoneNumber.toString() });
+    }
+
+    const existingFarmer = await Farmer.findOne({
+      $or: queryConditions,
+    });
+
+    if (existingFarmer) {
+      res.status(409).json({
+        message: "Farmer already exists with this email or phone number",
+      });
+    } else {
+      // Create new Farmer
+      const newFarmer = {
+        firstName,
+        lastName,
+        phoneNumber: cleanedPhoneNumber,
+        businessCategories: Array.isArray(businessCategories)
+          ? businessCategories.map((category) => category.trim())
+          : [businessCategories.toString().trim()],
+        businessState,
+        businessLocalGovernmentArea,
+        businessAddress,
+        password,
+        isFarmer,
+      };
+      if (cleanedEmail !== null) {
+        newFarmer.email = cleanedEmail;
+      }
+
+      const farmer = await Farmer.create(newFarmer);
+
+      // Respond with farmer details
+      if (farmer) {
+        res.status(201).json({
+          _id: farmer._id,
+          firstName: farmer.firstName,
+          lastName: farmer.lastName,
+          phoneNumber: farmer.phoneNumber,
+          email: farmer.email,
+          businessCategories: farmer.businessCategories,
+          businessState: farmer.businessState,
+          businessLocalGovernmentArea: farmer.businessLocalGovernmentArea,
+          businessAddress: farmer.businessAddress,
+          isFarmer: farmer.isFarmer,
+        });
+      } else {
+        res.status(500).json({ message: "Failed to create farmer" });
+      }
+    }
+  } catch (error) {
+    console.error("Registration Error:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while registering farmer" });
   }
 });
 

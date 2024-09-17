@@ -13,10 +13,20 @@ const farmerSchema = mongoose.Schema(
       unique: true,
       sparse: true,
     },
-    businessCategories: {
+    firstName: {
       type: String,
       required: true,
     },
+    lastName: {
+      type: String,
+      required: true,
+    },
+    businessCategories: [
+      {
+        type: String,
+        required: true,
+      },
+    ],
     businessState: {
       type: String,
       required: true,
