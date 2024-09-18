@@ -27,6 +27,10 @@ const farmerSchema = mongoose.Schema(
         required: true,
       },
     ],
+    businessName: {
+      type: String,
+      required: true,
+    },
     businessState: {
       type: String,
       required: true,

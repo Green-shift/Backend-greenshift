@@ -13,6 +13,7 @@ const registerFarmer = asyncHandler(async (req, res) => {
     firstName,
     lastName,
     businessCategories,
+    businessName,
     businessState,
     businessLocalGovernmentArea,
     businessAddress,
@@ -72,6 +73,7 @@ const registerFarmer = asyncHandler(async (req, res) => {
         businessCategories: Array.isArray(businessCategories)
           ? businessCategories.map((category) => category.trim())
           : [businessCategories.toString().trim()],
+        businessName,
         businessState,
         businessLocalGovernmentArea,
         businessAddress,
@@ -92,6 +94,7 @@ const registerFarmer = asyncHandler(async (req, res) => {
           lastName: farmer.lastName,
           phoneNumber: farmer.phoneNumber,
           email: farmer.email,
+          businessName: farmer.businessName,
           businessCategories: farmer.businessCategories,
           businessState: farmer.businessState,
           businessLocalGovernmentArea: farmer.businessLocalGovernmentArea,
@@ -299,32 +302,48 @@ const getFarmerProducts = asyncHandler(async (req, res) => {
   }
 });
 
-
 // @desc    Pre-list a new product
 // @route   POST /api/products/prelist
 // @access  Private (Farmer only)
 const preListProduct = asyncHandler(async (req, res) => {
-  const { name, description, price, category, stock, images, startHarvestDate, endHarvestDate } = req.body;
+  const {
+    name,
+    description,
+    price,
+    category,
+    stock,
+    images,
+    startHarvestDate,
+    endHarvestDate,
+  } = req.body;
 
   // Validate required fields
-  if (!name || !description || !price || !category || !startHarvestDate || !endHarvestDate) {
+  if (
+    !name ||
+    !description ||
+    !price ||
+    !category ||
+    !startHarvestDate ||
+    !endHarvestDate
+  ) {
     res.status(400);
-    throw new Error('Please provide all required fields: name, description, price, category, startHarvestDate, endHarvestDate');
+    throw new Error(
+      "Please provide all required fields: name, description, price, category, startHarvestDate, endHarvestDate"
+    );
   }
-
 
   // Additional checks
   if (price < 0) {
     res.status(400);
-    throw new Error('Price cannot be negative');
+    throw new Error("Price cannot be negative");
   }
   if (stock < 0) {
     res.status(400);
-    throw new Error('Stock cannot be negative');
+    throw new Error("Stock cannot be negative");
   }
   if (new Date(startHarvestDate) > new Date(endHarvestDate)) {
     res.status(400);
-    throw new Error('Start date cannot be after end date');
+    throw new Error("Start date cannot be after end date");
   }
 
   // Create the prelisted product
@@ -341,43 +360,38 @@ const preListProduct = asyncHandler(async (req, res) => {
   });
 
   const createdProduct = await preListedProduct.save();
-  
+
   res.status(201).json({
-    message: 'Product pre-listed successfully',
+    message: "Product pre-listed successfully",
     product: createdProduct,
   });
-
-})
+});
 
 // @desc Get all prelisted products by the logged-in farmer
 // @route GET /api/products/prelist
 // @access Private (Farmers only)
 const getFarmerPrelistedProducts = asyncHandler(async (req, res) => {
-
   const products = await PreListProduct.find({ createdBy: req.user._id });
 
   res.status(200).json(products);
 });
 
-
 // @desc Delete a prelisted product by the logged-in farmer
 // @route DELETE /api/products/prelist/:id
 // @access Private (Farmers only)
 const deletePrelistedProduct = asyncHandler(async (req, res) => {
-
   const product = await PreListProduct.findById(req.params.id);
 
   // Check if product exists and belongs to the farmer
   if (!product || product.createdBy.toString() !== req.user._id.toString()) {
     res.status(404);
-    throw new Error('Product not found or unauthorized');
+    throw new Error("Product not found or unauthorized");
   }
 
   await product.deleteOne();
 
-  res.status(200).json({ message: 'Product deleted successfully' });
+  res.status(200).json({ message: "Product deleted successfully" });
 });
-
 
 export {
   registerFarmer,
@@ -388,5 +402,5 @@ export {
   deleteProduct,
   preListProduct,
   getFarmerPrelistedProducts,
-  deletePrelistedProduct
+  deletePrelistedProduct,
 };
