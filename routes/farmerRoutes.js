@@ -8,6 +8,9 @@ import {
   registerFarmer,
   updateProduct,
   deleteProduct,
+  preListProduct,
+  getFarmerPrelistedProducts,
+  deletePrelistedProduct,
 } from "../controllers/farmerControllers.js";
 import { farmerOnly, protect } from "../middleware/authMiddleware.js";
 
@@ -54,4 +57,12 @@ router.put(
 // Delete a product
 router.delete("/products/:id", protect, farmerOnly, deleteProduct);
 
+// Prelist a product
+router.route('/prelist')
+  .post(protect, farmerOnly, preListProduct)
+  .get(protect, farmerOnly, getFarmerPrelistedProducts);
+
+// Routes to Delete specific products
+router.route('/prelist/:id')
+  .delete(protect, farmerOnly, deletePrelistedProduct);
 export default router;

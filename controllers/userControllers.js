@@ -2,6 +2,9 @@ import asyncHandler from "express-async-handler";
 import User from "../models/userModel.js";
 import generateToken from "../utils/generateToken.js";
 import Farmer from "../models/farmerModel.js";
+import Cart from "../models/cart.js";
+import Product from "../models/productSchema.js";
+import PreListProduct from "../models/preListProductSchema.js";
 
 // @desc    Auth user or farmer / set token
 // @route   POST /api/auth
@@ -62,6 +65,7 @@ const authUserOrFarmer = asyncHandler(async (req, res) => {
     }
   }
 });
+
 // @desc    Register a new user
 // @route   POST /api/users
 // @access  Public
@@ -205,10 +209,179 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
+//@desc    Add item to cart
+//@route   POST /api/cart/add
+//@access  Private
+const addToCart = asyncHandler(async (req, res) => {
+  const { productId, quantity } = req.body;
+  const userId = req.user._id;
+
+  // Check if the product exists
+  const product = await Product.findById(productId);
+  if (!product) {
+    res.status(404);
+    throw new Error('Product not found');
+  }
+
+
+  // Find the user's cart or create a new one if it doesn't exist
+  let cart = await Cart.findOne({ userId });
+
+  if (!cart) {
+    cart = new Cart({ userId, items: [] });
+  }
+
+  // Check if the product is already in the cart
+  const existingCartItem = cart.items.find(
+    (item) => item.productId.toString() === productId
+  );
+
+  if (existingCartItem) {
+    existingCartItem.quantity += quantity;
+  } else {
+    // Add new item to the cart
+    cart.items.push({ productId, quantity });
+  }
+
+  // Save the cart
+  const updatedCart = await cart.save();
+
+  res.status(200).json({ message: 'Item added to cart', cart: updatedCart });
+})
+
+//@desc    Get user's cart
+//@route   GET /api/cart
+//@access  Private
+const getCart = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  // Find the user's cart 
+  const cart = await Cart.findOne({ userId }).populate('items.productId');
+
+  if (!cart) {
+    return res.status(200).json({ items: [] }); // Return empty cart if cart is a falsy
+  }
+
+  res.status(200).json(cart);
+});
+
+
+//@desc    Update cart item quantity
+//@route   PUT /api/cart/update
+//@access  Private
+const updateCartItem = asyncHandler(async (req, res) => {
+  const { productId, quantity } = req.body;
+  const userId = req.user._id;
+
+  // Validate the quantity
+  if (quantity < 1) {
+    res.status(400);
+    throw new Error('Quantity must be at least 1');
+  }
+
+  // Find the user's cart (truthy)
+  const cart = await Cart.findOne({ userId });
+
+  if (!cart) {
+    res.status(404);
+    throw new Error('Cart not found');
+  }
+
+  // Find the cart item
+  const cartItem = cart.items.find(
+    (item) => item.productId == productId
+  );
+
+  if (!cartItem) {
+    res.status(404);
+    throw new Error('Product not found in cart');
+  }
+
+  // Update the quantity
+  cartItem.quantity = quantity;
+
+  // Save the cart
+  const updatedCart = await cart.save();
+
+  res.status(200).json({ message: 'Cart item updated', cart: updatedCart });
+});
+
+
+//@desc    Remove item from cart
+//@route   DELETE /api/cart/remove/:productId
+//@access  Private
+const removeCartItem = asyncHandler(async (req, res) => {
+  const { productId } = req.params;
+  const userId = req.user._id;
+
+  // Find the user's cart
+  const cart = await Cart.findOne({ userId });
+
+  if (!cart) {
+    res.status(404);
+    throw new Error('Cart not found');
+  }
+
+  // Find the item in the cart
+  const itemIndex = cart.items.findIndex(item => item.productId == productId);
+
+  if (itemIndex === -1) {
+    res.status(404);
+    throw new Error('Product not found in cart');
+  }
+
+  // Remove the item
+  cart.items.splice(itemIndex, 1);
+
+  // Save the cart
+  const updatedCart = await cart.save();
+
+  res.status(200).json({ message: 'Item removed from cart', cart: updatedCart });
+});
+
+
+//@desc    Clear user's cart
+//@route   DELETE /api/cart/clear
+//@access  Private
+const clearCart = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  // Find the user's cart
+  const cart = await Cart.findOne({ userId });
+
+  if (!cart) {
+    return res.status(200).json({ message: 'Cart is already empty', cart: { items: [] } });
+  }
+
+  // Clear all items
+  cart.items = [];
+
+  // Save the cart
+  const updatedCart = await cart.save();
+
+  res.status(200).json({ message: 'Cart cleared', cart: updatedCart });
+});
+
+// @desc Get all approved prelisted products
+// @route GET /api/products/prelist/all
+// @access Public
+const getAllApprovedPrelistedProducts = asyncHandler(async (req, res) => {
+  // Fetch all products with status 'approved'
+  const products = await PreListProduct.find({ status: 'approved' });
+
+  res.status(200).json(products);
+});
+
 export {
   authUserOrFarmer,
   registerUser,
   logoutUser,
   getUserProfile,
   updateUserProfile,
+  addToCart,
+  getCart,
+  updateCartItem,
+  removeCartItem,
+  clearCart,
+  getAllApprovedPrelistedProducts
 };
