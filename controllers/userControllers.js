@@ -368,7 +368,7 @@ const clearCart = asyncHandler(async (req, res) => {
 // @access Public
 const getAllApprovedPrelistedProducts = asyncHandler(async (req, res) => {
   // Fetch all products with status 'approved'
-  const products = await PreListProduct.find({ status: "approved" });
+  const products = await PreListProduct.find();
 
   res.status(200).json(products);
 });
