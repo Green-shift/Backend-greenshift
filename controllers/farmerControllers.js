@@ -312,7 +312,6 @@ const preListProduct = asyncHandler(async (req, res) => {
     price,
     category,
     stock,
-    images,
     startHarvestDate,
     endHarvestDate,
   } = req.body;
@@ -353,7 +352,6 @@ const preListProduct = asyncHandler(async (req, res) => {
     price,
     category,
     stock,
-    images,
     startHarvestDate,
     endHarvestDate,
     createdBy: req.user._id,

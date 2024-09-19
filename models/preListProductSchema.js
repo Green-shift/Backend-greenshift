@@ -1,6 +1,6 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const preListProductSchema = mongoose.Schema({
+const preListProductSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
@@ -19,22 +19,13 @@ const preListProductSchema = mongoose.Schema({
     required: true,
   },
   stock: {
-    type: Number,
-    default: 0,
+    type: String,
+    required: true,
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
-    default: 'pending',
-  },
-  images: {
-    type: [String], 
-    validate: {
-      validator: function(value) {
-        return value.length <= 5; 
-      },
-      message: 'You can upload a maximum of 5 images',
-    },
+    enum: ["pending", "approved", "rejected"],
+    default: "pending",
   },
   startHarvestDate: {
     type: Date, // Starting date of harvest
@@ -47,12 +38,12 @@ const preListProductSchema = mongoose.Schema({
       validator: function (value) {
         return this.startHarvestDate < value;
       },
-      message: 'End harvest date must be after start harvest date',
+      message: "End harvest date must be after start harvest date",
     },
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Farmer',
+    ref: "Farmer",
     required: true,
   },
   createdAt: {
@@ -65,6 +56,6 @@ const preListProductSchema = mongoose.Schema({
   },
 });
 
-const PreListProduct = mongoose.model('PreListProduct', preListProductSchema);
+const PreListProduct = mongoose.model("PreListProduct", preListProductSchema);
 
 export default PreListProduct;
